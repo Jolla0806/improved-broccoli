@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>西兰花生长环境监控系统</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            animation: fadeIn 0.8s ease-in;
+        }
+
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .sensor-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .sensor-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+        }
+
+        .sensor-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+        }
+
+        .sensor-icon {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .sensor-name {
+            font-size: 0.95em;
+            color: #666;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .sensor-value {
+            font-size: 2.2em;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .sensor-unit {
+            font-size: 0.9em;
+            color: #999;
+        }
+
+        .sensor-status {
+            font-size: 0.85em;
+            margin-top: 12px;
+            padding: 8px 12px;
+            border-radius: 20px;
+            display: inline-block;
+            font-weight: 600;
+        }
+
+        .status-good {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .status-warning {
+            background: #fff3e0;
+            color: #e65100;
+        }
+
+        .status-danger {
+            background: #ffebee;
+            color: #c62828;
+        }
+
+        .charts-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .chart-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+
+        .chart-title {
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .alert-section {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+
+        .alert-title {
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .alert-item {
+            padding: 15px;
+            border-left: 4px solid;
+            margin-bottom: 12px;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .alert-warning {
+            border-left-color: #ff9800;
+            background: #fff3e0;
+            color: #e65100;
+        }
+
+        .alert-danger {
+            border-left-color: #f44336;
+            background: #ffebee;
+            color: #c62828;
+        }
+
+        .alert-info {
+            border-left-color: #2196f3;
+            background: #e3f2fd;
+            color: #1565c0;
+        }
+
+        .alert-icon {
+            font-size: 1.5em;
+            flex-shrink: 0;
+        }
+
+        .alert-text {
+            flex: 1;
+        }
+
+        .alert-time {
+            font-size: 0.85em;
+            opacity: 0.8;
+        }
+
+        .control-panel {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            margin-top: 20px;
+        }
+
+        .control-title {
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .control-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .control-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 15px;
+            background: #f5f5f5;
+            border-radius: 10px;
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .control-item:hover {
+            border-color: #667eea;
+            background: #f0f0ff;
+        }
+
+        .control-item input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        .control-label {
+            flex: 1;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .stats-footer {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 30px;
+        }
+
+        .stat-box {
+            background: rgba(255,255,255,0.15);
+            color: white;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+
+        .stat-value {
+            font-size: 1.8em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 0.95em;
+            opacity: 0.9;
+        }
+
+        .last-update {
+            text-align: center;
+            color: white;
+            margin-top: 20px;
+            font-size: 0.95em;
+            opacity: 0.8;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 768px) {
+            header h1 {
+                font-size: 1.8em;
+            }
+
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+
+            .charts-section {
+                grid-template-columns: 1fr;
+            }
+
+            .control-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .gauge-container {
+            position: relative;
+            width: 140px;
+            height: 140px;
+            margin: 0 auto 15px;
+        }
+
+        .gauge {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: conic-gradient(
+                #2e7d32 0deg,
+                #66bb6a 90deg,
+                #fff176 180deg,
+                #ffa726 270deg,
+                #ef5350 315deg,
+                #ef5350 360deg
+            );
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.1);
+        }
+
+        .gauge-inner {
+            width: 85%;
+            height: 85%;
+            border-radius: 50%;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: #333;
+            font-size: 1.2em;
+        }
+
+        .summary-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .summary-item {
+            padding: 15px;
+            background: #f5f5f5;
+            border-radius: 10px;
+            border-left: 4px solid;
+        }
+
+        .summary-item.temp {
+            border-left-color: #ff7043;
+        }
+
+        .summary-item.humidity {
+            border-left-color: #29b6f6;
+        }
+
+        .summary-item.light {
+            border-left-color: #ffd54f;
+        }
+
+        .summary-item.soil {
+            border-left-color: #8d6e63;
+        }
+
+        .summary-label {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .summary-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🥦 西兰花生长环境监控系统</h1>
+            <p>实时环境参数监测与分析平台</p>
+        </header>
+
+        <!-- 传感器卡片 -->
+        <div class="dashboard">
+            <div class="sensor-card">
+                <div class="sensor-icon">🌡️</div>
+                <div class="sensor-name">温度</div>
+                <div class="gauge-container">
+                    <div class="gauge">
+                        <div class="gauge-inner" id="tempGauge">22°C</div>
+                    </div>
+                </div>
+                <div class="sensor-status status-good" id="tempStatus">✓ 正常</div>
+            </div>
+
+            <div class="sensor-card">
+                <div class="sensor-icon">💧</div>
+                <div class="sensor-name">相对湿度</div>
+                <div class="gauge-container">
+                    <div class="gauge">
+                        <div class="gauge-inner" id="humidityGauge">65%</div>
+                    </div>
+                </div>
+                <div class="sensor-status status-good" id="humidityStatus">✓ 正常</div>
+            </div>
+
+            <div class="sensor-card">
+                <div class="sensor-icon">☀️</div>
+                <div class="sensor-name">光照强度</div>
+                <div class="gauge-container">
+                    <div class="gauge">
+                        <div class="gauge-inner" id="lightGauge">750</div>
+                    </div>
+                </div>
+                <div class="sensor-status status-good" id="lightStatus">✓ 正常</div>
+            </div>
+
+            <div class="sensor-card">
+                <div class="sensor-icon">🌱</div>
+                <div class="sensor-name">土壤含水量</div>
+                <div class="gauge-container">
+                    <div class="gauge">
+                        <div class="gauge-inner" id="soilGauge">58%</div>
+                    </div>
+                </div>
+                <div class="sensor-status status-good" id="soilStatus">✓ 正常</div>
+            </div>
+
+            <div class="sensor-card">
+                <div class="sensor-icon">📊</div>
+                <div class="sensor-name">土壤pH值</div>
+                <div class="gauge-container">
+                    <div class="gauge">
+                        <div class="gauge-inner" id="phGauge">6.8</div>
+                    </div>
+                </div>
+                <div class="sensor-status status-good" id="phStatus">✓ 正常</div>
+            </div>
+
+            <div class="sensor-card">
+                <div class="sensor-icon">🌪️</div>
+                <div class="sensor-name">空气流通</div>
+                <div class="gauge-container">
+                    <div class="gauge">
+                        <div class="gauge-inner" id="airflowGauge">2.5</div>
+                    </div>
+                </div>
+                <div class="sensor-status status-good" id="airflowStatus">✓ 正常</div>
+            </div>
+        </div>
+
+        <!-- 数据统计摘要 -->
+        <div class="summary-stats">
+            <div class="summary-item temp">
+                <div class="summary-label">24小时最高温度</div>
+                <div class="summary-value" id="maxTemp">26°C</div>
+            </div>
+            <div class="summary-item humidity">
+                <div class="summary-label">24小时平均湿度</div>
+                <div class="summary-value" id="avgHumidity">62%</div>
+            </div>
+            <div class="summary-item light">
+                <div class="summary-label">今日总光照时长</div>
+                <div class="summary-value" id="lightHours">8.5h</div>
+            </div>
+            <div class="summary-item soil">
+                <div class="summary-label">上次浇水距今</div>
+                <div class="summary-value" id="lastWatering">12h</div>
+            </div>
+        </div>
+
+        <!-- 图表部分 -->
+        <div class="charts-section">
+            <div class="chart-card">
+                <div class="chart-title">温度和湿度趋势（24小时）</div>
+                <canvas id="tempHumidityChart"></canvas>
+            </div>
+
+            <div class="chart-card">
+                <div class="chart-title">光照强度变化</div>
+                <canvas id="lightChart"></canvas>
+            </div>
+        </div>
+
+        <!-- 告警信息 -->
+        <div class="alert-section">
+            <div class="alert-title">⚠️ 系统告警</div>
+            <div id="alertContainer">
+                <div class="alert-item alert-info">
+                    <div class="alert-icon">ℹ️</div>
+                    <div class="alert-text">
+                        <strong>系统运行正常</strong>
+                        <div class="alert-time">所有传感器运行良好，环境参数在最优范围内</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 控制面板 -->
+        <div class="control-panel">
+            <div class="control-title">⚙️ 自动控制设置</div>
+            <div class="control-grid">
+                <div class="control-item">
+                    <input type="checkbox" id="autoWater" checked>
+                    <label class="control-label" for="autoWater">自动浇水系统</label>
+                </div>
+                <div class="control-item">
+                    <input type="checkbox" id="autoLight" checked>
+                    <label class="control-label" for="autoLight">自动补光系统</label>
+                </div>
+                <div class="control-item">
+                    <input type="checkbox" id="autoVent" checked>
+                    <label class="control-label" for="autoVent">自动通风系统</label>
+                </div>
+                <div class="control-item">
+                    <input type="checkbox" id="autoHumid" checked>
+                    <label class="control-label" for="autoHumid">自动加湿系统</label>
+                </div>
+            </div>
+        </div>
+
+        <!-- 统计信息 -->
+        <div class="stats-footer">
+            <div class="stat-box">
+                <div class="stat-value" id="uptime">99.8%</div>
+                <div class="stat-label">系统运行时间</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value" id="sensorCount">6</div>
+                <div class="stat-label">活跃传感器</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value" id="alertCount">0</div>
+                <div class="stat-label">活跃告警</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value" id="growthDays">15</div>
+                <div class="stat-label">生长天数</div>
+            </div>
+        </div>
+
+        <div class="last-update">
+            最后更新时间: <span id="lastUpdate">2026-03-23 12:00:00</span>
+        </div>
+    </div>
+
+    <script>
+        // 初始数据配置
+        const config = {
+            temperature: { min: 15, optimal: 22, max: 28 },
+            humidity: { min: 50, optimal: 65, max: 80 },
+            light: { min: 500, optimal: 750, max: 1000 },
+            soil: { min: 40, optimal: 60, max: 80 },
+            ph: { min: 6.0, optimal: 6.8, max: 7.5 },
+            airflow: { min: 1.5, optimal: 2.5, max: 4.0 }
+        };
+
+        // 传感器数据
+        let sensorData = {
+            temperature: 22,
+            humidity: 65,
+            light: 750,
+            soil: 58,
+            ph: 6.8,
+            airflow: 2.5
+        };
+
+        // 历史数据（用于图表）
+        let temperatureHistory = [];
+        let humidityHistory = [];
+        let lightHistory = [];
+        const timeLabels = [];
+
+        // 图表实例
+        let tempHumidityChart = null;
+        let lightChart = null;
+
+        // 初始化时间标签
+        function initializeTimeLabels() {
+            const now = new Date();
+            for (let i = 23; i >= 0; i--) {
+                const time = new Date(now.getTime() - i * 60 * 60 * 1000);
+                timeLabels.push(time.getHours() + ':00');
+            }
+        }
+
+        // 初始化历史数据
+        function initializeHistoryData() {
+            for (let i = 0; i < 24; i++) {
+                temperatureHistory.push(20 + Math.random() * 6);
+                humidityHistory.push(60 + Math.random() * 15);
+                lightHistory.push(Math.random() * 800 + 200);
+            }
+        }
+
+        // 更新传感器值
+        function updateSensorValues() {
+            // 模拟实时数据变化
+            sensorData.temperature += (Math.random() - 0.5) * 0.5;
+            sensorData.humidity += (Math.random() - 0.5) * 2;
+            sensorData.light += (Math.random() - 0.5) * 50;
+            sensorData.soil += (Math.random() - 0.5) * 1;
+            sensorData.ph += (Math.random() - 0.5) * 0.1;
+            sensorData.airflow += (Math.random() - 0.5) * 0.3;
+
+            // 限制数据范围
+            sensorData.temperature = Math.max(config.temperature.min, Math.min(config.temperature.max, sensorData.temperature));
+            sensorData.humidity = Math.max(config.humidity.min, Math.min(config.humidity.max, sensorData.humidity));
+            sensorData.light = Math.max(config.light.min, Math.min(config.light.max, sensorData.light));
+            sensorData.soil = Math.max(config.soil.min, Math.min(config.soil.max, sensorData.soil));
+            sensorData.ph = Math.max(config.ph.min, Math.min(config.ph.max, sensorData.ph));
+            sensorData.airflow = Math.max(config.airflow.min, Math.min(config.airflow.max, sensorData.airflow));
+        }
+
+        // 更新UI显示
+        function updateUI() {
+            // 更新仪表盘
+            document.getElementById('tempGauge').textContent = sensorData.temperature.toFixed(1) + '°C';
+            document.getElementById('humidityGauge').textContent = sensorData.humidity.toFixed(0) + '%';
+            document.getElementById('lightGauge').textContent = sensorData.light.toFixed(0);
+            document.getElementById('soilGauge').textContent = sensorData.soil.toFixed(0) + '%';
+            document.getElementById('phGauge').textContent = sensorData.ph.toFixed(1);
+            document.getElementById('airflowGauge').textContent = sensorData.airflow.toFixed(1);
+
+            // 更新状态
+            updateStatus('temp', sensorData.temperature, config.temperature, '°C');
+            updateStatus('humidity', sensorData.humidity, config.humidity, '%');
+            updateStatus('light', sensorData.light, config.light, '');
+            updateStatus('soil', sensorData.soil, config.soil, '%');
+            updateStatus('ph', sensorData.ph, config.ph, '');
+            updateStatus('airflow', sensorData.airflow, config.airflow, '');
+
+            // 更新时间
+            const now = new Date();
+            document.getElementById('lastUpdate').textContent = now.toLocaleString('zh-CN');
+        }
+
+        // 更新状态显示
+        function updateStatus(type, value, config, unit) {
+            const statusElement = document.getElementById(type + 'Status');
+            const minRange = config.min * 0.9;
+            const maxRange = config.max * 1.1;
+
+            if (value >= config.min && value <= config.max) {
+                statusElement.className = 'sensor-status status-good';
+                statusElement.textContent = '✓ 正常';
+            } else if (value >= minRange && value <= maxRange) {
+                statusElement.className = 'sensor-status status-warning';
+                statusElement.textContent = '⚠ 轻微偏离';
+            } else {
+                statusElement.className = 'sensor-status status-danger';
+                statusElement.textContent = '✗ 异常';
+            }
+        }
+
+        // 初始化图表
+        function initializeCharts() {
+            // 温度和湿度图表
+            const ctx1 = document.getElementById('tempHumidityChart').getContext('2d');
+            tempHumidityChart = new Chart(ctx1, {
+                type: 'line',
+                data: {
+                    labels: timeLabels,
+                    datasets: [
+                        {
+                            label: '温度 (°C)',
+                            data: temperatureHistory,
+                            borderColor: '#ff7043',
+                            backgroundColor: 'rgba(255, 112, 67, 0.1)',
+                            borderWidth: 2,
+                            tension: 0.4,
+                            fill: true,
+                            pointRadius: 0,
+                            yAxisID: 'y'
+                        },
+                        {
+                            label: '湿度 (%)',
+                            data: humidityHistory,
+                            borderColor: '#29b6f6',
+                            backgroundColor: 'rgba(41, 182, 246, 0.1)',
+                            borderWidth: 2,
+                            tension: 0.4,
+                            fill: true,
+                            pointRadius: 0,
+                            yAxisID: 'y1'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            title: {
+                                display: true,
+                                text: '温度 (°C)'
+                            }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            title: {
+                                display: true,
+                                text: '湿度 (%)'
+                            },
+                            grid: {
+                                drawOnChartArea: false
+                            }
+                        }
+                    }
+                }
+            });
+
+            // 光照图表
+            const ctx2 = document.getElementById('lightChart').getContext('2d');
+            lightChart = new Chart(ctx2, {
+                type: 'bar',
+                data: {
+                    labels: timeLabels,
+                    datasets: [
+                        {
+                            label: '光照强度 (lux)',
+                            data: lightHistory,
+                            backgroundColor: '#ffd54f',
+                            borderColor: '#ffb300',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 1000
+                        }
+                    }
+                }
+            });
+        }
+
+        // 更新图表数据
+        function updateCharts() {
+            if (temperatureHistory.length > 24) {
+                temperatureHistory.shift();
+                humidityHistory.shift();
+                lightHistory.shift();
+            }
+
+            temperatureHistory.push(sensorData.temperature);
+            humidityHistory.push(sensorData.humidity);
+            lightHistory.push(sensorData.light);
+
+            if (tempHumidityChart) {
+                tempHumidityChart.data.datasets[0].data = temperatureHistory;
+                tempHumidityChart.data.datasets[1].data = humidityHistory;
+                tempHumidityChart.update('none');
+            }
+
+            if (lightChart) {
+                lightChart.data.datasets[0].data = lightHistory;
+                lightChart.update('none');
+            }
+        }
+
+        // 生成告警
+        function generateAlerts() {
+            const alerts = [];
+            const alertContainer = document.getElementById('alertContainer');
+
+            // 检查各个参数
+            if (sensorData.temperature < config.temperature.min) {
+                alerts.push({
+                    level: 'danger',
+                    icon: '🌡️',
+                    title: '温度过低',
+                    message: `当前温度 ${sensorData.temperature.toFixed(1)}°C，低于最低值 ${config.temperature.min}°C`
+                });
+            }
+            if (sensorData.temperature > config.temperature.max) {
+                alerts.push({
+                    level: 'danger',
+                    icon: '🌡️',
+                    title: '温度过高',
+                    message: `当前温度 ${sensorData.temperature.toFixed(1)}°C，超过最高值 ${config.temperature.max}°C`
+                });
+            }
+            if (sensorData.humidity < config.humidity.min) {
+                alerts.push({
+                    level: 'warning',
+                    icon: '💧',
+                    title: '湿度偏低',
+                    message: `当前湿度 ${sensorData.humidity.toFixed(0)}%，低于最低值 ${config.humidity.min}%`
+                });
+            }
+            if (sensorData.soil < config.soil.min) {
+                alerts.push({
+                    level: 'warning',
+                    icon: '🌱',
+                    title: '土壤干旱',
+                    message: `土壤含水量 ${sensorData.soil.toFixed(0)}%，需要浇水`
+                });
+            }
+
+            document.getElementById('alertCount').textContent = alerts.length;
+
+            if (alerts.length === 0) {
+                alertContainer.innerHTML = `
+                    <div class="alert-item alert-info">
+                        <div class="alert-icon">ℹ️</div>
+                        <div class="alert-text">
+                            <strong>系统运行正常</strong>
+                            <div class="alert-time">所有传感器运行良好，环境参数在最优范围内</div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                alertContainer.innerHTML = alerts.map(alert => `
+                    <div class="alert-item alert-${alert.level}">
+                        <div class="alert-icon">${alert.icon}</div>
+                        <div class="alert-text">
+                            <strong>${alert.title}</strong>
+                            <div class="alert-time">${alert.message}</div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        // 主更新循环
+        function updateAll() {
+            updateSensorValues();
+            updateUI();
+            updateCharts();
+            generateAlerts();
+        }
+
+        // 初始化
+        function init() {
+            initializeTimeLabels();
+            initializeHistoryData();
+            initializeCharts();
+            updateUI();
+            generateAlerts();
+
+            // 每2秒更新一次数据
+            setInterval(updateAll, 2000);
+        }
+
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', init);
+
+        // 处理控制面板复选框
+        document.getElementById('autoWater').addEventListener('change', function() {
+            console.log('自动浇水系统:', this.checked ? '启用' : '禁用');
+        });
+        document.getElementById('autoLight').addEventListener('change', function() {
+            console.log('自动补光系统:', this.checked ? '启用' : '禁用');
+        });
+        document.getElementById('autoVent').addEventListener('change', function() {
+            console.log('自动通风系统:', this.checked ? '启用' : '禁用');
+        });
+        document.getElementById('autoHumid').addEventListener('change', function() {
+            console.log('自动加湿系统:', this.checked ? '启用' : '禁用');
+        });
+    </script>
+</body>
+</html>
